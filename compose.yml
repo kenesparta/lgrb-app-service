@@ -1,0 +1,8 @@
+services:
+  app-service:
+    image: kenesparta/lgr-app-service
+    restart: "always"
+    environment:
+      AUTH_SERVICE_HOST: ${AUTH_SERVICE_HOST}
+    ports:
+      - "8000:8000"
