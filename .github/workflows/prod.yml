@@ -18,8 +18,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          app-service/.cargo
-          app-service/target/
+          .cargo
+          target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
 
@@ -27,7 +27,7 @@ jobs:
       run: rustup update stable && rustup default stable
 
     - name: Build and test app-service code
-      working-directory: ./app-service
+      working-directory: .
       run: |
         cargo build --verbose
         cargo test --verbose
