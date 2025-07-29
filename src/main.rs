@@ -1,5 +1,8 @@
+mod grpc_client;
+
 use std::env;
 
+use crate::grpc_client::GrpcAuthClient;
 use askama::Template;
 use axum::{
     http::StatusCode,
@@ -56,36 +59,61 @@ async fn protected(jar: CookieJar) -> impl IntoResponse {
         }
     };
 
-    let api_client = reqwest::Client::builder().build().unwrap();
-
-    let verify_token_body = serde_json::json!({
-        "token": &jwt_cookie.value(),
-    });
-
-    let auth_hostname = env::var("AUTH_SERVICE_HOST").unwrap_or("".to_owned());
-    if auth_hostname.is_empty() {
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    let url = format!("{}/verify-token", auth_hostname);
-
-    let response = match api_client.post(&url).json(&verify_token_body).send().await {
-        Ok(response) => response,
+    let mut grpc_client = match GrpcAuthClient::new().await {
+        Ok(client) => client,
         Err(_) => {
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
 
-    match response.status() {
-        reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::BAD_REQUEST => {
+    match grpc_client
+        .verify_token(jwt_cookie.value().to_string())
+        .await
+    {
+        Ok(is_valid) => {
+            if is_valid {
+                return Json(ProtectedRouteResponse {
+                    img_url: "https://i.ibb.co/YP90j68/Light-Live-Bootcamp-Certificate.png"
+                        .to_owned(),
+                })
+                .into_response();
+            }
             StatusCode::UNAUTHORIZED.into_response()
         }
-        reqwest::StatusCode::OK => Json(ProtectedRouteResponse {
-            img_url: "https://i.ibb.co/YP90j68/Light-Live-Bootcamp-Certificate.png".to_owned(),
-        })
-            .into_response(),
-        _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+
+    //
+    // let api_client = reqwest::Client::builder().build().unwrap();
+    //
+    // let verify_token_body = serde_json::json!({
+    //     "token": &jwt_cookie.value(),
+    // });
+    //
+    // let auth_hostname = env::var("AUTH_SERVICE_HOST").unwrap_or("".to_owned());
+    // if auth_hostname.is_empty() {
+    //     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    // }
+    //
+    // let url = format!("{}/verify-token", auth_hostname);
+    //
+    // let response = match api_client.post(&url).json(&verify_token_body).send().await {
+    //     Ok(response) => response,
+    //     Err(_) => {
+    //         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    //     }
+    // };
+    //
+    // match response.status() {
+    //     reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::BAD_REQUEST => {
+    //         StatusCode::UNAUTHORIZED.into_response()
+    //     }
+    //     reqwest::StatusCode::OK => Json(ProtectedRouteResponse {
+    //         img_url: "https://i.ibb.co/YP90j68/Light-Live-Bootcamp-Certificate.png".to_owned(),
+    //     })
+    //     .into_response(),
+    //     _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    // }
 }
 
 async fn health_check() -> impl IntoResponse {

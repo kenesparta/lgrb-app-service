@@ -4,5 +4,6 @@ services:
     restart: "always"
     environment:
       AUTH_SERVICE_HOST: ${AUTH_SERVICE_HOST}
+      GRPC_AUTH_SERVICE_HOST: ${GRPC_AUTH_SERVICE_HOST}
     ports:
       - "8000:8000"
