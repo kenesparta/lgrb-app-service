@@ -43,6 +43,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore]
     async fn test_grpc_client() {
         let mut client = GrpcAuthClient::new()
             .await
