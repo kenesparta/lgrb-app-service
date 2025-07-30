@@ -1,9 +1,11 @@
 mod grpc_client;
-
-use std::env;
+mod verify_captcha;
 
 use crate::grpc_client::GrpcAuthClient;
+use crate::verify_captcha::CaptchaService;
 use askama::Template;
+use axum::extract::ConnectInfo;
+use axum::routing::post;
 use axum::{
     http::StatusCode,
     response::{Html, IntoResponse},
@@ -11,7 +13,9 @@ use axum::{
     Json, Router,
 };
 use axum_extra::extract::CookieJar;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::env;
+use std::net::SocketAddr;
 use tower_http::services::ServeDir;
 
 #[tokio::main]
@@ -20,7 +24,8 @@ async fn main() {
         .nest_service("/assets", ServeDir::new("assets"))
         .route("/", get(root))
         .route("/health-check", get(health_check))
-        .route("/protected", get(protected));
+        .route("/protected", get(protected))
+        .route("/verify-captcha", post(verify_captcha));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
 
@@ -33,6 +38,7 @@ async fn main() {
 struct IndexTemplate {
     login_link: String,
     logout_link: String,
+    captcha_site_key: String,
 }
 
 async fn root() -> impl IntoResponse {
@@ -43,10 +49,12 @@ async fn root() -> impl IntoResponse {
 
     let login_link = format!("{}", address);
     let logout_link = format!("{}/logout", address);
+    let captcha_site_key = env::var("CAPTCHA_SITE_KEY").unwrap_or("".to_owned());
 
     let template = IndexTemplate {
         login_link,
         logout_link,
+        captcha_site_key,
     };
     Html(template.render().unwrap())
 }
@@ -87,6 +95,63 @@ async fn protected(jar: CookieJar) -> impl IntoResponse {
 
 async fn health_check() -> impl IntoResponse {
     StatusCode::OK.into_response()
+}
+
+#[derive(Deserialize)]
+struct CaptchaVerificationRequest {
+    captcha_response: String,
+}
+
+#[derive(Serialize)]
+struct CaptchaVerificationResponse {
+    success: bool,
+    message: String,
+}
+
+async fn verify_captcha(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Json(payload): Json<CaptchaVerificationRequest>,
+) -> impl IntoResponse {
+    let captcha_service = match CaptchaService::new() {
+        Ok(service) => service,
+        Err(e) => {
+            println!("Failed to create captcha service: {}", e);
+            return Json(CaptchaVerificationResponse {
+                success: false,
+                message: "Internal server error".to_string(),
+            })
+            .into_response();
+        }
+    };
+
+    let client_ip = addr.ip().to_string();
+
+    match captcha_service
+        .verify_captcha(&payload.captcha_response, Some(&client_ip))
+        .await
+    {
+        Ok(is_valid) => {
+            if is_valid {
+                Json(CaptchaVerificationResponse {
+                    success: true,
+                    message: "Captcha verified successfully".to_string(),
+                })
+            } else {
+                Json(CaptchaVerificationResponse {
+                    success: false,
+                    message: "Captcha verification failed".to_string(),
+                })
+            }
+        }
+        Err(e) => {
+            println!("Captcha verification error: {}", e);
+            Json(CaptchaVerificationResponse {
+                success: false,
+                message: "Captcha verification error".to_string(),
+            })
+        }
+    }
+    .into_response()
 }
 
 #[derive(Serialize)]

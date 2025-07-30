@@ -4,3 +4,12 @@
 ### Health check
 GET {{baseUrl}}/health-check
 Content-Type: application/json
+
+
+### Test protected route with valid JWT cookie
+GET https://app.rustybootcamp.xyz/protected
+Cookie: jwt=your_valid_jwt_token_here
+
+### Test protected route with valid JWT cookie
+GET {{baseUrl}}/protected
+Cookie: jwt=your_valid_jwt_token_here
