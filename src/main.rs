@@ -61,7 +61,8 @@ async fn protected(jar: CookieJar) -> impl IntoResponse {
 
     let mut grpc_client = match GrpcAuthClient::new().await {
         Ok(client) => client,
-        Err(_) => {
+        Err(e) => {
+            println!("Failed to create a grpc client, {}", e.to_string());
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };

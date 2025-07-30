@@ -15,6 +15,7 @@ pub struct GrpcAuthClient {
 impl GrpcAuthClient {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let grpc_host = env::var("GRPC_AUTH_SERVICE_HOST").unwrap_or("".to_owned());
+        println!("GRPC_AUTH_SERVICE_HOST: {}", grpc_host);
         let channel = Channel::from_shared(grpc_host)?
             .connect()
             .await?;
