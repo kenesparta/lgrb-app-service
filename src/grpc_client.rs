@@ -1,12 +1,12 @@
 use std::env;
-use tonic::transport::Channel;
 use tonic::Request;
+use tonic::transport::Channel;
 
 pub mod auth_service {
     tonic::include_proto!("auth_service");
 }
 
-use auth_service::{auth_service_client::AuthServiceClient, VerifyTokenRequest};
+use auth_service::{VerifyTokenRequest, auth_service_client::AuthServiceClient};
 
 pub struct GrpcAuthClient {
     client: AuthServiceClient<Channel>,

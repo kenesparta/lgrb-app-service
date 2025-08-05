@@ -7,10 +7,10 @@ use askama::Template;
 use axum::extract::ConnectInfo;
 use axum::routing::post;
 use axum::{
+    Json, Router,
     http::StatusCode,
     response::{Html, IntoResponse},
     routing::get,
-    Json, Router,
 };
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
