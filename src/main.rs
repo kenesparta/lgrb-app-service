@@ -63,6 +63,7 @@ async fn protected(jar: CookieJar) -> impl IntoResponse {
     let jwt_cookie = match jar.get("jwt") {
         Some(cookie) => cookie,
         None => {
+            println!("No jwt cookie found");
             return StatusCode::UNAUTHORIZED.into_response();
         }
     };
