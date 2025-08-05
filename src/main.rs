@@ -90,7 +90,10 @@ async fn protected(jar: CookieJar) -> impl IntoResponse {
             }
             StatusCode::UNAUTHORIZED.into_response()
         }
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(e) => {
+            println!("Failed to verify token, {}", e.to_string());
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }
 
