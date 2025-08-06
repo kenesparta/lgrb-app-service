@@ -20,6 +20,10 @@ use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     let app = Router::new()
         .nest_service("/assets", ServeDir::new("assets"))
         .route("/", get(root))

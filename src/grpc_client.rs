@@ -1,6 +1,6 @@
 use std::env;
 use tonic::Request;
-use tonic::transport::Channel;
+use tonic::transport::{Channel, ClientTlsConfig};
 
 pub mod auth_service {
     tonic::include_proto!("auth_service");
@@ -16,9 +16,25 @@ impl GrpcAuthClient {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let grpc_host = env::var("GRPC_AUTH_SERVICE_HOST").unwrap_or("".to_owned());
         println!("GRPC_AUTH_SERVICE_HOST: {}", grpc_host);
-        let channel = Channel::from_shared(grpc_host)?.connect().await?;
+        let mut channel_builder = Channel::from_shared(grpc_host.clone())?;
 
+        if grpc_host.starts_with("https://") {
+            let domain = grpc_host
+                .strip_prefix("https://")
+                .unwrap_or(&grpc_host)
+                .split(':')
+                .next()
+                .unwrap_or(&grpc_host);
+
+            let tls_config = ClientTlsConfig::new()
+                .with_native_roots()
+                .domain_name(domain);
+            channel_builder = channel_builder.tls_config(tls_config)?;
+        }
+
+        let channel = channel_builder.connect().await?;
         let client = AuthServiceClient::new(channel);
+
         Ok(Self { client })
     }
 
